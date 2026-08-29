@@ -17,11 +17,12 @@ window.LEAVE_DATA = {
     { id: "u003", name: "สมศรี ตั้งใจ",  email: "somsri@example.com",  role: "hr" }
   ],
 
-  // 📁 leaveTypes — ประเภทการลา 3 แบบ
+  // 📁 leaveTypes — ประเภทการลา 4 แบบ
   leaveTypes: [
     { id: "lt001", name: "ลาพักร้อน" },
     { id: "lt002", name: "ลาป่วย" },
-    { id: "lt003", name: "ลากิจ" }
+    { id: "lt003", name: "ลากิจ" },
+    { id: "lt004", name: "ลาคลอด" }
   ],
 
   // 📁 leaveRequests — ใบขอลา 5 ใบ · สถานะกระจายครบทั้ง 3 ค่า

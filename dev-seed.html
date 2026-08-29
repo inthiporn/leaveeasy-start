@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Dev: ใส่ข้อมูลตัวอย่างลง Firestore</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/data.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🌱 ใส่ข้อมูลตัวอย่างลง Firestore</h1>
+    <p class="hint">
+      หน้านี้เป็นเครื่องมือของนักพัฒนา ใช้ครั้งเดียวตอนตั้งค่า ไม่ใช่หน้าของระบบจริง —
+      กดปุ่มด้านล่างเพื่อคัดลอกข้อมูลจาก <code>js/data.js</code> ไปเขียนลง Firestore
+      (<code>users</code>, <code>leaveTypes</code>, <code>leaveRequests</code> + subcollection <code>approvals</code>)
+      กดซ้ำได้หลายครั้งโดยไม่เกิดข้อมูลซ้ำ (ใช้ id เดิมทุกครั้ง)
+    </p>
+
+    <div class="card">
+      <button id="seedBtn" class="btn">ใส่ข้อมูลตัวอย่างลง Firestore</button>
+      <pre id="log" style="white-space: pre-wrap; margin-top: 1rem;"></pre>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebaseConfig.js";
+    import {
+      doc, setDoc, collection
+    } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+    const logEl = document.getElementById("log");
+    function log(text) {
+      logEl.textContent += text + "\n";
+    }
+
+    document.getElementById("seedBtn").addEventListener("click", async () => {
+      logEl.textContent = "";
+      const data = window.LEAVE_DATA;
+
+      try {
+        log("กำลังใส่ users...");
+        for (const user of data.users) {
+          const { id, ...fields } = user;
+          await setDoc(doc(db, "users", id), fields);
+        }
+        log(`✅ users เสร็จ (${data.users.length} รายการ)`);
+
+        log("กำลังใส่ leaveTypes...");
+        for (const type of data.leaveTypes) {
+          const { id, ...fields } = type;
+          await setDoc(doc(db, "leaveTypes", id), fields);
+        }
+        log(`✅ leaveTypes เสร็จ (${data.leaveTypes.length} รายการ)`);
+
+        log("กำลังใส่ leaveRequests...");
+        for (const req of data.leaveRequests) {
+          const { id, ...fields } = req;
+          await setDoc(doc(db, "leaveRequests", id), fields);
+        }
+        log(`✅ leaveRequests เสร็จ (${data.leaveRequests.length} รายการ)`);
+
+        log("กำลังใส่ approvals (เป็น subcollection ของแต่ละใบลา)...");
+        let approvalCount = 0;
+        for (const approval of data.approvals) {
+          const { id, requestId, ...fields } = approval;
+          await setDoc(doc(collection(db, "leaveRequests", requestId, "approvals"), id), fields);
+          approvalCount++;
+        }
+        log(`✅ approvals เสร็จ (${approvalCount} รายการ)`);
+
+        log("\n🎉 ใส่ข้อมูลตัวอย่างครบทุกส่วนแล้ว — เข้า Firebase Console ไปเช็คได้เลย");
+      } catch (err) {
+        log(`\n❌ เกิดข้อผิดพลาด: ${err.message}`);
+        log("ถ้าขึ้น permission-denied ให้เช็คว่าเปิด Firestore Database ในโปรเจกต์แล้ว และตั้ง Security Rules เป็นโหมดที่เขียนได้ (Test mode) หรือยัง");
+      }
+    });
+  </script>
+</body>
+</html>
