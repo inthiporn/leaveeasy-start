@@ -1,24 +1,37 @@
 // ─────────────────────────────────────────────────────────────
 // js/leave-request-detail.js — หน้าที่ 3 รายละเอียดใบลา
-// สัปดาห์ที่ 6 (ต้นสัปดาห์): อ่านจากข้อมูลปลอม และเปลี่ยนสถานะในหน่วยความจำ
+// อ่านจาก Firestore จริง · ปุ่มอนุมัติ/ไม่อนุมัติเขียนเฉพาะช่อง status
 // ─────────────────────────────────────────────────────────────
 
-(function () {
+import { db } from "./firebaseConfig.js";
+import { ต้องล็อกอิน } from "./auth.js";
+import {
+  doc, getDoc, updateDoc, deleteDoc, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+(async function () {
   var รหัสใบลา = ค่าจากURL("id");
   var กล่องใบลา = document.getElementById("กล่องใบลา");
   var กล่องความเห็น = document.getElementById("กล่องความเห็น");
+  var เอกสารใบลา = doc(db, "leaveRequests", รหัสใบลา);
+  var ผู้ใช้ = await ต้องล็อกอิน();
 
-  // หาใบลาจากข้อมูลปลอม บวกกับใบที่เพิ่งยื่นในหน้าที่ 2
-  var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-  var ใบ = window.LEAVE_DATA.leaveRequests.concat(ใบลาที่ยื่นใหม่)
-    .find(function (x) { return x.id === รหัสใบลา; });
+  var ใบ, ความเห็น;
+  try {
+    var สแนปช็อต = await getDoc(เอกสารใบลา);
+    if (!สแนปช็อต.exists()) {
+      กล่องใบลา.innerHTML = "<p>ไม่พบใบขอลาที่ต้องการ — อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง</p>";
+      return;
+    }
+    ใบ = Object.assign({ id: สแนปช็อต.id }, สแนปช็อต.data());
 
-  if (!ใบ) {
-    กล่องใบลา.innerHTML = "<p>ไม่พบใบขอลาที่ต้องการ — อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง</p>";
+    var สแนปช็อตความเห็น = await getDocs(collection(db, "leaveRequests", รหัสใบลา, "approvals"));
+    ความเห็น = สแนปช็อตความเห็น.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+  } catch (err) {
+    showConfigWarning("อ่านข้อมูลจาก Firestore ไม่สำเร็จ (" + err.message + ")");
+    กล่องใบลา.innerHTML = "<p>โหลดรายละเอียดใบลาไม่สำเร็จ</p>";
     return;
   }
-
-  var ความเห็น = window.LEAVE_DATA.approvals.filter(function (c) { return c.requestId === ใบ.id; });
 
   วาดใบลา();
   วาดความเห็น();
@@ -49,6 +62,7 @@
         '<div class="btn-row">' +
         '<button type="button" class="btn-ok" id="ปุ่มอนุมัติ">อนุมัติ</button>' +
         '<button type="button" class="btn-danger" id="ปุ่มไม่อนุมัติ">ไม่อนุมัติ</button>' +
+        '<button type="button" class="btn-danger" id="ปุ่มลบ">ลบใบลา</button>' +
         "</div>";
     } else {
       html += '<p class="hint">ใบนี้พิจารณาแล้ว จึงเปลี่ยนสถานะต่อไม่ได้</p>';
@@ -57,20 +71,46 @@
     กล่องใบลา.innerHTML = html;
 
     if (ใบ.status === "รอพิจารณา") {
-      document.getElementById("ปุ่มอนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("อนุมัติ"); });
-      document.getElementById("ปุ่มไม่อนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("ไม่อนุมัติ"); });
+      var ปุ่มอนุมัติ = document.getElementById("ปุ่มอนุมัติ");
+      var ปุ่มไม่อนุมัติ = document.getElementById("ปุ่มไม่อนุมัติ");
+      var ปุ่มลบ = document.getElementById("ปุ่มลบ");
+      ปุ่มอนุมัติ.addEventListener("click", function () { เปลี่ยนสถานะ("อนุมัติ", [ปุ่มอนุมัติ, ปุ่มไม่อนุมัติ, ปุ่มลบ]); });
+      ปุ่มไม่อนุมัติ.addEventListener("click", function () { เปลี่ยนสถานะ("ไม่อนุมัติ", [ปุ่มอนุมัติ, ปุ่มไม่อนุมัติ, ปุ่มลบ]); });
+      ปุ่มลบ.addEventListener("click", function () { ลบใบลา([ปุ่มอนุมัติ, ปุ่มไม่อนุมัติ, ปุ่มลบ]); });
     }
   }
 
-  // ── เปลี่ยนสถานะ (สัปดาห์นี้เปลี่ยนแค่ในหน่วยความจำ) ──
-  function เปลี่ยนสถานะ(สถานะใหม่) {
+  // ── เปลี่ยนสถานะ — เขียนเฉพาะช่อง status ลง Firestore ห้ามแตะช่องอื่น ──
+  async function เปลี่ยนสถานะ(สถานะใหม่, ปุ่มทั้งคู่) {
     // กฎ: จะไม่อนุมัติได้ ต้องมีความเห็นอย่างน้อย 1 รายการก่อน
     if (สถานะใหม่ === "ไม่อนุมัติ" && ความเห็น.length === 0) {
       alert("ต้องเขียนความเห็นอย่างน้อย 1 รายการก่อน จึงจะกดไม่อนุมัติได้");
       return;
     }
-    ใบ.status = สถานะใหม่;   // แก้เฉพาะช่อง status เท่านั้น
-    วาดใบลา();
+
+    ปุ่มทั้งคู่.forEach(function (ปุ่ม) { ปุ่ม.disabled = true; });
+    try {
+      await updateDoc(เอกสารใบลา, { status: สถานะใหม่ });   // ส่งแค่ฟิลด์ status ฟิลด์เดียว
+      ใบ.status = สถานะใหม่;
+      วาดใบลา();
+    } catch (err) {
+      alert("บันทึกสถานะลง Firestore ไม่สำเร็จ (" + err.message + ")");
+      ปุ่มทั้งคู่.forEach(function (ปุ่ม) { ปุ่ม.disabled = false; });
+    }
+  }
+
+  // ── ลบใบลา — ต้องยืนยันก่อนเสมอ ──
+  async function ลบใบลา(ปุ่มทั้งหมด) {
+    if (!confirm("ยืนยันว่าจะลบใบลานี้? ลบแล้วกู้คืนไม่ได้")) return;
+
+    ปุ่มทั้งหมด.forEach(function (ปุ่ม) { ปุ่ม.disabled = true; });
+    try {
+      await deleteDoc(เอกสารใบลา);
+      location.href = "leave-requests.html";
+    } catch (err) {
+      alert("ลบใบลาไม่สำเร็จ (" + err.message + ")");
+      ปุ่มทั้งหมด.forEach(function (ปุ่ม) { ปุ่ม.disabled = false; });
+    }
   }
 
   // ── รายการความเห็น เรียงจากเก่าไปใหม่ ──
@@ -102,11 +142,10 @@
     }
     เตือน.classList.add("hidden");
 
-    // สัปดาห์ที่ 6 ยังไม่มีล็อกอิน จึงสมมติว่าผู้เขียนคือ สมหญิง รักงาน
     ความเห็น.push({
       id: "ap-ใหม่-" + Date.now(),
       requestId: ใบ.id,
-      authorId: "u002", authorName: "สมหญิง รักงาน",
+      authorId: ผู้ใช้.uid, authorName: ผู้ใช้.displayName || ผู้ใช้.email,
       message: ข้อความ,
       createdAt: เวลาตอนนี้()
     });

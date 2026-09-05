@@ -1,13 +1,18 @@
 // ─────────────────────────────────────────────────────────────
 // js/new-leave-request.js — หน้าที่ 2 ยื่นใบลาใหม่
-// สัปดาห์ที่ 6 (ต้นสัปดาห์): เก็บไว้ในหน่วยความจำของเบราว์เซอร์เท่านั้น
-// ยังไม่บันทึกลงฐานข้อมูล (เป็นงานของสัปดาห์ที่ 7)
+// บันทึกใบลาใหม่ลง Firestore collection "leaveRequests" จริง
 // ─────────────────────────────────────────────────────────────
 
-(function () {
+import { db } from "./firebaseConfig.js";
+import { ต้องล็อกอิน } from "./auth.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+(async function () {
   var ฟอร์ม = document.getElementById("ฟอร์มใบลา");
   var ช่องประเภท = document.getElementById("leaveTypeId");
   var กล่องเตือน = document.getElementById("ข้อความเตือน");
+  var ปุ่มบันทึก = document.getElementById("ปุ่มบันทึก");
+  var ผู้ใช้ = await ต้องล็อกอิน();
 
   // เติมรายการเลื่อนลงด้วยประเภทการลาที่มีอยู่
   window.LEAVE_DATA.leaveTypes.forEach(function (ประเภท) {
@@ -17,7 +22,7 @@
     ช่องประเภท.appendChild(ตัวเลือก);
   });
 
-  ฟอร์ม.addEventListener("submit", function (e) {
+  ฟอร์ม.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     var ค่า = {
@@ -40,13 +45,11 @@
 
     var ประเภท = window.LEAVE_DATA.leaveTypes.find(function (t) { return t.id === ค่า.leaveTypeId; });
 
-    // สัปดาห์ที่ 6 ยังไม่มีล็อกอิน จึงสมมติว่าผู้ขอลาคือ สมชาย ใจดี
     var ใบใหม่ = {
-      id: "lr-ใหม่-" + Date.now(),
       title: ค่า.title,
       reason: ค่า.reason,
       status: "รอพิจารณา",                       // ใบใหม่เริ่มที่ รอพิจารณา เสมอ
-      requesterId: "u001", requesterName: "สมชาย ใจดี",
+      requesterId: ผู้ใช้.uid, requesterName: ผู้ใช้.displayName || ผู้ใช้.email,
       approverId: "",      approverName: "",
       leaveTypeId: ประเภท.id, leaveTypeName: ประเภท.name,
       startDate: ค่า.startDate,
@@ -54,11 +57,14 @@
       createdAt: เวลาตอนนี้()
     };
 
-    var รายการ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-    รายการ.push(ใบใหม่);
-    sessionStorage.setItem("ใบลาที่ยื่นใหม่", JSON.stringify(รายการ));
-
-    location.href = "leave-requests.html";
+    ปุ่มบันทึก.disabled = true;
+    try {
+      await addDoc(collection(db, "leaveRequests"), ใบใหม่);
+      location.href = "leave-requests.html";
+    } catch (err) {
+      เตือน("บันทึกลง Firestore ไม่สำเร็จ (" + err.message + ")");
+      ปุ่มบันทึก.disabled = false;
+    }
   });
 
   function เตือน(ข้อความ) {

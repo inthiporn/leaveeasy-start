@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ · LeaveEasy</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/login.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 LeaveEasy</h1>
+    <p class="subtitle">เข้าสู่ระบบเพื่อใช้งานระบบขอลาออนไลน์</p>
+
+    <div class="card">
+      <div class="btn-row">
+        <button type="button" class="btn" id="แท็บเข้าสู่ระบบ">เข้าสู่ระบบ</button>
+        <button type="button" class="btn-ghost" id="แท็บสมัครสมาชิก">สมัครสมาชิก</button>
+      </div>
+
+      <div id="ข้อความเตือน" class="alert alert-error hidden"></div>
+
+      <form id="ฟอร์มเข้าสู่ระบบ">
+        <label for="อีเมลเข้าสู่ระบบ">อีเมล</label>
+        <input type="email" id="อีเมลเข้าสู่ระบบ" placeholder="you@example.com">
+
+        <label for="รหัสผ่านเข้าสู่ระบบ">รหัสผ่าน</label>
+        <input type="password" id="รหัสผ่านเข้าสู่ระบบ">
+
+        <div class="btn-row">
+          <button type="submit">เข้าสู่ระบบ</button>
+        </div>
+      </form>
+
+      <form id="ฟอร์มสมัครสมาชิก" class="hidden">
+        <label for="ชื่อสมัคร">ชื่อ</label>
+        <input type="text" id="ชื่อสมัคร" placeholder="เช่น สมชาย ใจดี">
+
+        <label for="อีเมลสมัคร">อีเมล</label>
+        <input type="email" id="อีเมลสมัคร" placeholder="you@example.com">
+
+        <label for="รหัสผ่านสมัคร">รหัสผ่าน</label>
+        <input type="password" id="รหัสผ่านสมัคร">
+        <p class="hint">อย่างน้อย 6 ตัวอักษร</p>
+
+        <div class="btn-row">
+          <button type="submit">สมัครสมาชิก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,10 +4,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import { db } from "./firebaseConfig.js";
+import { ต้องล็อกอิน } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 (async function () {
   var กล่อง = document.getElementById("ผลลัพธ์");
+  await ต้องล็อกอิน();
 
   var ใบลาจากฐานข้อมูล;
   try {
@@ -19,10 +21,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/
     return;
   }
 
-  // ใบลาจาก Firestore บวกกับใบที่เพิ่งยื่นในหน้าถัดไป
-  // (สัปดาห์นี้ยังไม่เขียนใบใหม่ลง Firestore ใบที่ยื่นใหม่จึงหายเมื่อปิดเบราว์เซอร์)
-  var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-  var ใบลาทั้งหมด = ใบลาจากฐานข้อมูล.concat(ใบลาที่ยื่นใหม่);
+  var ใบลาทั้งหมด = ใบลาจากฐานข้อมูล;
 
   // ถ้ามีสถานะติดมาท้าย URL ให้กรองเฉพาะสถานะนั้น
   var สถานะที่กรอง = ค่าจากURL("status");
